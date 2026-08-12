@@ -123,9 +123,9 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
     }
   };
 
-  const resetNewQuestionForm = () => {
+  const resetNewQuestionForm = (nextNum) => {
     setNewQuestionForm({
-      title: "",
+      title: nextNum ? `Q${nextNum}. ` : "",
       description: "",
       image_url: "",
       subject: "Mathematics",
@@ -170,7 +170,9 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
         } catch (attachErr) { /* non-fatal, will be picked up on next Save */ }
       }
       toast.success(keepOpen ? "Question saved · add the next one" : "Question saved and attached");
-      resetNewQuestionForm();
+      // Compute the next question number (form.question_ids was just updated with the new id)
+      const nextNumber = ((form.question_ids?.length) || 0) + 2;
+      resetNewQuestionForm(keepOpen ? nextNumber : null);
       if (!keepOpen) setNewQuestionOpen(false);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Failed to save question");
@@ -196,7 +198,7 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
       // If the folder was created with no questions, open the Create Question wizard
       // so the admin can start adding them one-by-one right away.
       if ((form.question_ids || []).length === 0) {
-        resetNewQuestionForm();
+        resetNewQuestionForm(1);
         setNewQuestionOpen(true);
       } else {
         onOpenChange(false);
@@ -434,7 +436,7 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
     }}>
       <DialogContent className="rounded-sm max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Question</DialogTitle>
+          <DialogTitle data-testid="ef-question-header">Create Question — Q{(form.question_ids?.length || 0) + 1}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
