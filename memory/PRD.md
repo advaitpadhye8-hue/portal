@@ -133,3 +133,7 @@ Implemented & verified (13/13 backend pytests + UI):
 ## Recent Changes (2026-02-XX) — Live Control-Room Admin Dashboard
 - **AdminDashboard.jsx rewritten** as a real-time control room: auto-polls KPIs/activities every 5s, pulsating LIVE indicator, value-change flash animation, real-time activity feed.
 - User opted to skip post-implementation testing for this iteration (verified visually via screenshot in prior session).
+
+## Bug Fix (2026-02-XX) — OCR-related crash removed
+- `Questions.jsx` had stale JSX referencing removed OCR state (`ocrOpen`, `ocrResults`, etc.), causing `ReferenceError: ocrOpen is not defined` and cascading "Failed to save folder" toasts on the Question Bank page.
+- Removed the entire Photo/PDF Import OCR dialog from Question Bank per user request ("i dont want ocr"). Kept `Upload` icon import (still used for question image upload). Backend OCR endpoints untouched (unused now).

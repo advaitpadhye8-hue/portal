@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Loader2, Save, Wand2, Folder, FolderPlus, Search } from "lucide-react";
+import { Plus, Trash2, Pencil, Loader2, Save, Wand2, Folder, FolderPlus, Search, Upload } from "lucide-react";
 import ExamFolderDialog from "@/components/ExamFolderDialog";
 
 const TYPES = [
@@ -259,66 +259,6 @@ export default function Questions() {
                   {qaLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1" />}
                   Create Exam & Assign
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={ocrOpen} onOpenChange={setOcrOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" data-testid="ocr-upload-btn"><Camera className="w-4 h-4 mr-1" /> Photo/PDF Import</Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-sm max-w-3xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> AI Question Extractor</DialogTitle>
-              </DialogHeader>
-              <p className="text-sm text-muted-foreground">Upload a JPG/PNG photo or PDF of a question paper. OpenAI Vision will extract questions, options & answers (each PDF page processed separately).</p>
-              <div>
-                <input ref={fileRef} type="file" accept="image/*,application/pdf,.pdf" hidden onChange={(e) => e.target.files?.[0] && runOcr(e.target.files[0])} data-testid="ocr-file-input" />
-                <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={ocrLoading} data-testid="ocr-pick-btn">
-                  {ocrLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
-                  {ocrLoading ? "Extracting…" : "Choose Image or PDF"}
-                </Button>
-              </div>
-              {ocrResults.length > 0 && (
-                <div className="space-y-3 mt-4">
-                  <div className="flex items-center gap-2 flex-wrap border border-border rounded-sm p-3 bg-muted/30">
-                    <Folder className="w-4 h-4 text-primary" />
-                    <Label className="text-xs">Assign all to Test Folder (optional)</Label>
-                    <Input
-                      value={ocrFolder}
-                      onChange={(e) => setOcrFolder(e.target.value)}
-                      placeholder="e.g. JEE Mains 2024 Paper 1"
-                      className="rounded-sm flex-1 min-w-[180px]"
-                      list="ocr-folder-options"
-                      data-testid="ocr-folder-input"
-                    />
-                    <datalist id="ocr-folder-options">
-                      {(meta.test_folders || []).map((f) => <option key={f} value={f} />)}
-                    </datalist>
-                  </div>
-                  <div className="text-sm font-medium">Extracted {ocrResults.length} question(s) — edit before saving:</div>
-                  {ocrResults.map((q, i) => (
-                    <div key={i} className="grid-card p-4">
-                      <Input className="font-medium mb-2" value={q.title} onChange={(e) => { const c = [...ocrResults]; c[i].title = e.target.value; setOcrResults(c); }} />
-                      <div className="space-y-1">
-                        {(q.options || []).map((o, j) => (
-                          <div key={j} className="flex gap-2 items-center">
-                            <span className="mono w-6 text-xs">{o.key}.</span>
-                            <Input value={o.text} onChange={(e) => { const c = [...ocrResults]; c[i].options[j].text = e.target.value; setOcrResults(c); }} />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
-                        <div><Label>Subject</Label><Input value={q.subject} onChange={(e) => { const c = [...ocrResults]; c[i].subject = e.target.value; setOcrResults(c); }} /></div>
-                        <div><Label>Answer</Label><Input value={q.correct_answer} onChange={(e) => { const c = [...ocrResults]; c[i].correct_answer = e.target.value; setOcrResults(c); }} /></div>
-                        <div><Label>Marks</Label><Input type="number" value={q.marks} onChange={(e) => { const c = [...ocrResults]; c[i].marks = Number(e.target.value); setOcrResults(c); }} /></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <DialogFooter>
-                <Button onClick={saveOcrBatch} disabled={!ocrResults.length} data-testid="ocr-save-batch"><Save className="w-4 h-4 mr-1" /> Save {ocrResults.length} to Bank</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
