@@ -508,16 +508,14 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {newQuestionForm.options.map((opt, idx) => (
                   <div key={idx} className="flex gap-2 items-center">
-                    <Input className="w-12 mono" value={opt.key} onChange={(e) => {
-                      const next = [...newQuestionForm.options];
-                      next[idx].key = e.target.value;
-                      setNewQuestionForm({ ...newQuestionForm, options: next });
-                    }} />
+                    <div className="w-9 h-9 flex items-center justify-center rounded-sm bg-primary/10 text-primary font-bold mono text-sm border border-primary/30 shrink-0">
+                      {opt.key}
+                    </div>
                     <Input value={opt.text} onChange={(e) => {
                       const next = [...newQuestionForm.options];
                       next[idx].text = e.target.value;
                       setNewQuestionForm({ ...newQuestionForm, options: next });
-                    }} placeholder={`Option ${opt.key}`} />
+                    }} placeholder={`Option ${opt.key}`} data-testid={`ef-opt-${opt.key}`} />
                   </div>
                 ))}
               </div>

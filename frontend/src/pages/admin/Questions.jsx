@@ -347,8 +347,10 @@ export default function Questions() {
                 <TabsContent value="options" className="space-y-3">
                   {form.type.startsWith("mcq") && form.options.map((o, i) => (
                     <div key={i} className="flex gap-2 items-center">
-                      <Input className="w-12 mono" value={o.key} onChange={(e) => { const c = [...form.options]; c[i].key = e.target.value; setForm({ ...form, options: c }); }} />
-                      <Input value={o.text} onChange={(e) => { const c = [...form.options]; c[i].text = e.target.value; setForm({ ...form, options: c }); }} data-testid={`opt-${i}`} />
+                      <div className="w-9 h-9 flex items-center justify-center rounded-sm bg-primary/10 text-primary font-bold mono text-sm border border-primary/30 shrink-0">
+                        {o.key}
+                      </div>
+                      <Input value={o.text} onChange={(e) => { const c = [...form.options]; c[i].text = e.target.value; setForm({ ...form, options: c }); }} placeholder={`Option ${o.key}`} data-testid={`opt-${i}`} />
                     </div>
                   ))}
                   <div>
