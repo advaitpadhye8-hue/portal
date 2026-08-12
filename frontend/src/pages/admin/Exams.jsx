@@ -11,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Copy, ChartBar, Save, Share2, MessageSquare, Mail, Link as LinkIcon, QrCode } from "lucide-react";
+import { Plus, Trash2, Pencil, Copy, ChartBar, Save, Share2, MessageSquare, Mail, Link as LinkIcon, QrCode, FolderPlus } from "lucide-react";
+import ExamFolderDialog from "@/components/ExamFolderDialog";
 
 const blank = () => ({
   name: "", description: "", type: "mock", exam_type: "mock", duration_minutes: 60,
@@ -61,6 +62,7 @@ export default function Exams() {
   const [studentSearch, setStudentSearch] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
   const [share, setShare] = useState(null);
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
 
   const load = async () => {
     const [{ data: e }, { data: q }, { data: s }, { data: b }] = await Promise.all([
@@ -150,6 +152,10 @@ export default function Exams() {
           <h1 className="heading text-3xl font-bold mt-1">Exam Management</h1>
           <p className="text-sm text-muted-foreground mt-1">{rows.length} exams · {rows.filter((r) => r.is_published).length} live</p>
         </div>
+        <div className="flex items-center gap-2 flex-wrap">
+        <Button variant="outline" onClick={() => setFolderDialogOpen(true)} data-testid="exams-create-folder-btn">
+          <FolderPlus className="w-4 h-4 mr-1" /> Create Exam Folder
+        </Button>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditingId(null); setForm(blank()); } }}>
           <DialogTrigger asChild><Button data-testid="add-exam-btn"><Plus className="w-4 h-4 mr-1" /> Create Exam</Button></DialogTrigger>
           <DialogContent className="rounded-sm max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -351,7 +357,14 @@ export default function Exams() {
             <DialogFooter><Button onClick={submit} data-testid="exam-save"><Save className="w-4 h-4 mr-1" /> {editingId ? "Update" : "Create"} Exam</Button></DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </header>
+
+      <ExamFolderDialog
+        open={folderDialogOpen}
+        onOpenChange={setFolderDialogOpen}
+        onSaved={() => { load(); }}
+      />
 
       <div className="space-y-6">
         {rows.length === 0 && <div className="grid-card p-12 text-center text-muted-foreground">No exams yet.</div>}

@@ -137,3 +137,11 @@ Implemented & verified (13/13 backend pytests + UI):
 ## Bug Fix (2026-02-XX) — OCR-related crash removed
 - `Questions.jsx` had stale JSX referencing removed OCR state (`ocrOpen`, `ocrResults`, etc.), causing `ReferenceError: ocrOpen is not defined` and cascading "Failed to save folder" toasts on the Question Bank page.
 - Removed the entire Photo/PDF Import OCR dialog from Question Bank per user request ("i dont want ocr"). Kept `Upload` icon import (still used for question image upload). Backend OCR endpoints untouched (unused now).
+
+## Feature (2026-02-XX) — Folder-First Question Wizard on Exams page
+- Added **"Create Exam Folder"** button on the Exams page (uses shared `ExamFolderDialog`).
+- Removed "must have at least 1 question" gate on folder save (folder can now be created blank).
+- After a blank folder is saved, the **Create Question dialog auto-opens** with MCQ single + A/B/C/D options + +4/-1 marks + test folder pre-filled.
+- Create Question dialog now has **two buttons**: `Save & Add Next` (saves + resets form) and `Save & Finish` (saves + closes).
+- Each new question is live-attached to the exam via `POST /exams/{exam_id}/import-from-bank`.
+- Fixed broken `<Select>` blocks (missing `SelectTrigger`/`SelectContent`) in the Create Question dialog.

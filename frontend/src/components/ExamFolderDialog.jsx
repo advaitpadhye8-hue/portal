@@ -68,6 +68,9 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
   const [newQuestionLoading, setNewQuestionLoading] = useState(false);
   const [newQuestionImageLoading, setNewQuestionImageLoading] = useState(false);
   const newQuestionFileRef = useRef(null);
+  // Once the folder is saved, this holds the created exam id so subsequent
+  // "Save & Add Another" questions are attached live to that exam.
+  const [liveExamId, setLiveExamId] = useState(null);
 
   useEffect(() => {
     setNewQuestionForm((prev) => ({ ...prev, test_folder: form.folder_name || "" }));
@@ -76,6 +79,7 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
   useEffect(() => {
     if (!open) return;
     setForm({ ...blank(), ...(initial || {}) });
+    setLiveExamId(initial?.exam_id || null);
     Promise.all([
       api.get("/questions"),
       api.get("/admin/students"),
@@ -119,12 +123,38 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
     }
   };
 
-  const saveNewQuestion = async () => {
+  const resetNewQuestionForm = () => {
+    setNewQuestionForm({
+      title: "",
+      description: "",
+      image_url: "",
+      subject: "Mathematics",
+      chapter: "",
+      topic: "",
+      test_folder: form.folder_name || "",
+      difficulty: "medium",
+      tags: [],
+      type: "mcq_single",
+      options: [
+        { key: "A", text: "" },
+        { key: "B", text: "" },
+        { key: "C", text: "" },
+        { key: "D", text: "" },
+      ],
+      correct_answer: "",
+      explanation: "",
+      marks: 4,
+      negative_marks: 1,
+    });
+  };
+
+  const saveNewQuestion = async (keepOpen = false) => {
     if (!newQuestionForm.title.trim()) return toast.error("Question title is required");
     setNewQuestionLoading(true);
     try {
       const payload = {
         ...newQuestionForm,
+        test_folder: newQuestionForm.test_folder || form.folder_name || "",
         tags: newQuestionForm.tags?.map((t) => t.trim()).filter(Boolean) || [],
       };
       const { data } = await api.post("/questions", payload);
@@ -133,30 +163,15 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
         ...prevForm,
         question_ids: prevForm.question_ids.includes(data.id) ? prevForm.question_ids : [...prevForm.question_ids, data.id],
       }));
-      setNewQuestionOpen(false);
-      setNewQuestionForm({
-        title: "",
-        description: "",
-        image_url: "",
-        subject: "Mathematics",
-        chapter: "",
-        topic: "",
-        test_folder: form.folder_name || "",
-        difficulty: "medium",
-        tags: [],
-        type: "mcq_single",
-        options: [
-          { key: "A", text: "" },
-          { key: "B", text: "" },
-          { key: "C", text: "" },
-          { key: "D", text: "" },
-        ],
-        correct_answer: "",
-        explanation: "",
-        marks: 4,
-        negative_marks: 1,
-      });
-      toast.success("Question saved and attached");
+      // If the folder was already saved, attach the new question to the exam immediately
+      if (liveExamId) {
+        try {
+          await api.post(`/exams/${liveExamId}/import-from-bank`, { question_ids: [data.id] });
+        } catch (attachErr) { /* non-fatal, will be picked up on next Save */ }
+      }
+      toast.success(keepOpen ? "Question saved · add the next one" : "Question saved and attached");
+      resetNewQuestionForm();
+      if (!keepOpen) setNewQuestionOpen(false);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Failed to save question");
     } finally {
@@ -167,13 +182,25 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
   const submit = async () => {
     if (!form.folder_name.trim()) return toast.error("Folder name is required");
     if (!form.exam_name.trim()) return toast.error("Exam name is required");
-    if (form.question_ids.length === 0) return toast.error("Pick at least one question");
     setSaving(true);
     try {
       const { data } = await api.post("/questions/folder-exam", form);
       toast.success(`Exam ${data.action} — ${data.questions_count} Qs · ${data.assigned_count} students`);
-      onOpenChange(false);
+      // Remember the saved exam so subsequent question adds attach live
+      const savedExamId = data?.exam?.id;
+      if (savedExamId) {
+        setLiveExamId(savedExamId);
+        setForm((prev) => ({ ...prev, exam_id: savedExamId }));
+      }
       onSaved?.(data);
+      // If the folder was created with no questions, open the Create Question wizard
+      // so the admin can start adding them one-by-one right away.
+      if ((form.question_ids || []).length === 0) {
+        resetNewQuestionForm();
+        setNewQuestionOpen(true);
+      } else {
+        onOpenChange(false);
+      }
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Failed to save folder");
     } finally { setSaving(false); }
@@ -385,34 +412,26 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
         <DialogFooter>
           <Button onClick={submit} disabled={saving} data-testid="ef-save">
             {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-            {isEdit ? "Save Changes" : "Create Exam Folder"}
+            {isEdit
+              ? "Save Changes"
+              : (form.question_ids.length === 0 ? "Create Folder → Add Questions" : "Create Exam Folder")}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
 
-    <Dialog open={newQuestionOpen} onOpenChange={(o) => { setNewQuestionOpen(o); if (!o) setNewQuestionForm((prev) => ({
-      ...prev,
-      title: "",
-      description: "",
-      image_url: "",
-      subject: "Mathematics",
-      chapter: "",
-      topic: "",
-      difficulty: "medium",
-      tags: [],
-      type: "mcq_single",
-      options: [
-        { key: "A", text: "" },
-        { key: "B", text: "" },
-        { key: "C", text: "" },
-        { key: "D", text: "" },
-      ],
-      correct_answer: "",
-      explanation: "",
-      marks: 4,
-      negative_marks: 1,
-    })); }}>
+    <Dialog open={newQuestionOpen} onOpenChange={(o) => {
+      setNewQuestionOpen(o);
+      if (!o) {
+        resetNewQuestionForm();
+        // If this add-question dialog was opened after a live folder save,
+        // close the parent folder dialog and refresh the folder list.
+        if (liveExamId) {
+          onOpenChange(false);
+          onSaved?.({ exam: { id: liveExamId }, action: "questions_added" });
+        }
+      }
+    }}>
       <DialogContent className="rounded-sm max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Question</DialogTitle>
@@ -460,21 +479,27 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
             <div>
               <Label>Question type</Label>
               <Select value={newQuestionForm.type} onValueChange={(v) => setNewQuestionForm({ ...newQuestionForm, type: v })}>
-                <SelectItem value="mcq_single">MCQ — Single</SelectItem>
-                <SelectItem value="mcq_multi">MCQ — Multiple</SelectItem>
-                <SelectItem value="true_false">True / False</SelectItem>
-                <SelectItem value="fill_blank">Fill in the Blank</SelectItem>
-                <SelectItem value="numerical">Numerical</SelectItem>
-                <SelectItem value="short">Short Answer</SelectItem>
-                <SelectItem value="long">Long Answer</SelectItem>
+                <SelectTrigger className="rounded-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mcq_single">MCQ — Single</SelectItem>
+                  <SelectItem value="mcq_multi">MCQ — Multiple</SelectItem>
+                  <SelectItem value="true_false">True / False</SelectItem>
+                  <SelectItem value="fill_blank">Fill in the Blank</SelectItem>
+                  <SelectItem value="numerical">Numerical</SelectItem>
+                  <SelectItem value="short">Short Answer</SelectItem>
+                  <SelectItem value="long">Long Answer</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Difficulty</Label>
               <Select value={newQuestionForm.difficulty} onValueChange={(v) => setNewQuestionForm({ ...newQuestionForm, difficulty: v })}>
-                <SelectItem value="easy">Easy</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="hard">Hard</SelectItem>
+                <SelectTrigger className="rounded-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
               </Select>
             </div>
           </div>
@@ -511,10 +536,14 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
           <div><Label>Test folder</Label><Input value={newQuestionForm.test_folder} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, test_folder: e.target.value })} /></div>
           <div><Label>Tags (comma-separated)</Label><Input value={(newQuestionForm.tags || []).join(",")} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, tags: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></div>
         </div>
-        <DialogFooter>
-          <Button onClick={saveNewQuestion} disabled={newQuestionLoading} data-testid="ef-save-new-question">
+        <DialogFooter className="gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => saveNewQuestion(true)} disabled={newQuestionLoading} data-testid="ef-save-add-next">
+            {newQuestionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+            Save & Add Next
+          </Button>
+          <Button onClick={() => saveNewQuestion(false)} disabled={newQuestionLoading} data-testid="ef-save-new-question">
             {newQuestionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-            Save question and attach
+            Save & Finish
           </Button>
         </DialogFooter>
       </DialogContent>
