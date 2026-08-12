@@ -437,12 +437,14 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
           <DialogTitle>Create Question</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div><Label>Question text</Label><Textarea rows={3} value={newQuestionForm.title} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, title: e.target.value })} data-testid="new-question-title" /></div>
-          <div><Label>Description (optional)</Label><Textarea rows={2} value={newQuestionForm.description} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, description: e.target.value })} /></div>
+          <div>
+            <Label>Question text</Label>
+            <Textarea rows={4} value={newQuestionForm.title} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, title: e.target.value })} data-testid="new-question-title" placeholder="Type the question (include options A/B/C/D inside if you want, or upload an image)" />
+          </div>
           <div>
             <Label>Image (optional)</Label>
             <div
-              className="border border-dashed border-border rounded-sm p-5 text-center cursor-pointer bg-muted/50"
+              className="border border-dashed border-border rounded-sm p-4 text-center cursor-pointer bg-muted/50"
               onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer?.files?.[0]) uploadNewQuestionImage(e.dataTransfer.files[0]); }}
               onDragOver={(e) => e.preventDefault()}
               onDragEnter={(e) => e.preventDefault()}
@@ -456,92 +458,54 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
                 onChange={(e) => e.target.files?.[0] && uploadNewQuestionImage(e.target.files[0])}
                 data-testid="new-question-image"
               />
-              <div className="flex flex-col items-center justify-center gap-2">
+              <div className="flex flex-col items-center justify-center gap-1.5">
                 {newQuestionImageLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5 text-primary" />}
-                <div className="text-sm text-muted-foreground">Drag and drop an image or <button type="button" className="text-primary underline" onClick={() => newQuestionFileRef.current?.click()}>browse</button></div>
-                <div className="text-xs text-muted-foreground">Supported: JPG, PNG. Max 10MB.</div>
+                <div className="text-sm text-muted-foreground">Drag & drop or <button type="button" className="text-primary underline" onClick={() => newQuestionFileRef.current?.click()}>browse</button></div>
               </div>
             </div>
             {newQuestionForm.image_url ? (
               <div className="mt-3 space-y-2">
-                <div className="text-xs text-muted-foreground">Preview</div>
                 <div className="border border-border rounded-sm overflow-hidden max-h-56">
                   <img src={newQuestionForm.image_url} alt="Uploaded question" className="w-full object-contain" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" type="button" onClick={() => setNewQuestionForm({ ...newQuestionForm, image_url: "" })}>Remove image</Button>
-                  <a href={newQuestionForm.image_url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Open full image</a>
-                </div>
+                <Button size="sm" variant="ghost" type="button" onClick={() => setNewQuestionForm({ ...newQuestionForm, image_url: "" })}>Remove image</Button>
               </div>
             ) : null}
           </div>
+          <div>
+            <Label>Correct Answer</Label>
+            <div className="grid grid-cols-4 gap-2 mt-1.5">
+              {["A", "B", "C", "D"].map((k) => {
+                const selected = (Array.isArray(newQuestionForm.correct_answer)
+                  ? newQuestionForm.correct_answer
+                  : [newQuestionForm.correct_answer]).includes(k);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setNewQuestionForm({ ...newQuestionForm, correct_answer: k })}
+                    data-testid={`ef-ans-${k}`}
+                    className={`h-14 rounded-sm border-2 font-bold mono text-lg transition ${selected ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:border-primary/60"}`}
+                  >
+                    {k}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Question type</Label>
-              <Select value={newQuestionForm.type} onValueChange={(v) => setNewQuestionForm({ ...newQuestionForm, type: v })}>
-                <SelectTrigger className="rounded-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mcq_single">MCQ — Single</SelectItem>
-                  <SelectItem value="mcq_multi">MCQ — Multiple</SelectItem>
-                  <SelectItem value="true_false">True / False</SelectItem>
-                  <SelectItem value="fill_blank">Fill in the Blank</SelectItem>
-                  <SelectItem value="numerical">Numerical</SelectItem>
-                  <SelectItem value="short">Short Answer</SelectItem>
-                  <SelectItem value="long">Long Answer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Difficulty</Label>
-              <Select value={newQuestionForm.difficulty} onValueChange={(v) => setNewQuestionForm({ ...newQuestionForm, difficulty: v })}>
-                <SelectTrigger className="rounded-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div><Label>Marks (+)</Label><Input type="number" value={newQuestionForm.marks} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, marks: Number(e.target.value) })} data-testid="ef-marks" /></div>
+            <div><Label>Negative (-)</Label><Input type="number" value={newQuestionForm.negative_marks} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, negative_marks: Number(e.target.value) })} data-testid="ef-negative" /></div>
           </div>
-          {newQuestionForm.type.startsWith("mcq") && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {newQuestionForm.options.map((opt, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <div className="w-9 h-9 flex items-center justify-center rounded-sm bg-primary/10 text-primary font-bold mono text-sm border border-primary/30 shrink-0">
-                      {opt.key}
-                    </div>
-                    <Input value={opt.text} onChange={(e) => {
-                      const next = [...newQuestionForm.options];
-                      next[idx].text = e.target.value;
-                      setNewQuestionForm({ ...newQuestionForm, options: next });
-                    }} placeholder={`Option ${opt.key}`} data-testid={`ef-opt-${opt.key}`} />
-                  </div>
-                ))}
-              </div>
-              <div>
-                <Label>Correct answer {newQuestionForm.type === "mcq_multi" ? <span className="text-xs text-muted-foreground">(comma-separated, e.g. A,C)</span> : null}</Label>
-                <Input value={Array.isArray(newQuestionForm.correct_answer) ? newQuestionForm.correct_answer.join(",") : (newQuestionForm.correct_answer || "")} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, correct_answer: newQuestionForm.type === "mcq_multi" ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : e.target.value })} />
-              </div>
-            </div>
-          )}
-          <div><Label>Answer / Explanation</Label><Textarea rows={2} value={newQuestionForm.explanation} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, explanation: e.target.value })} /></div>
-          <div className="grid grid-cols-3 gap-3">
-            <div><Label>Subject</Label><Input value={newQuestionForm.subject} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, subject: e.target.value })} /></div>
-            <div><Label>Marks</Label><Input type="number" value={newQuestionForm.marks} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, marks: Number(e.target.value) })} /></div>
-            <div><Label>Negative</Label><Input type="number" value={newQuestionForm.negative_marks} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, negative_marks: Number(e.target.value) })} /></div>
-          </div>
-          <div><Label>Test folder</Label><Input value={newQuestionForm.test_folder} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, test_folder: e.target.value })} /></div>
-          <div><Label>Tags (comma-separated)</Label><Input value={(newQuestionForm.tags || []).join(",")} onChange={(e) => setNewQuestionForm({ ...newQuestionForm, tags: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></div>
         </div>
         <DialogFooter className="gap-2 flex-wrap">
           <Button variant="outline" onClick={() => saveNewQuestion(true)} disabled={newQuestionLoading} data-testid="ef-save-add-next">
             {newQuestionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
-            Save & Add Next
+            Save & Next
           </Button>
           <Button onClick={() => saveNewQuestion(false)} disabled={newQuestionLoading} data-testid="ef-save-new-question">
             {newQuestionLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-            Save & Finish
+            Finish
           </Button>
         </DialogFooter>
       </DialogContent>
