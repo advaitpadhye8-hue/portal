@@ -15,6 +15,21 @@ import { Save, Loader2, FolderPlus, Search, Users, FileQuestion, Plus, Upload } 
 
 const TAG_PRESETS = ["JEE Mains", "JEE Advanced", "MHT-CET", "NEET"];
 
+// Marking scheme by exam tag: [positive, negative]
+const TAG_MARKS = {
+  "JEE Mains": [4, 1],
+  "JEE Advanced": [4, 1],
+  "MHT-CET": [2, 0],
+  "NEET": [4, 1],
+};
+const marksForTag = (tag) => TAG_MARKS[tag] || [4, 1];
+const instructionsForTag = (tag) => {
+  const [p, n] = marksForTag(tag);
+  return n > 0
+    ? `Read each question carefully. Marks: +${p} correct, -${n} wrong.`
+    : `Read each question carefully. Marks: +${p} correct, 0 wrong (no negative).`;
+};
+
 const blank = () => ({
   folder_name: "",
   exam_id: null,
@@ -124,6 +139,7 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
   };
 
   const resetNewQuestionForm = (nextNum) => {
+    const [pos, neg] = marksForTag(form.exam_tag);
     setNewQuestionForm({
       title: nextNum ? `Q${nextNum}. ` : "",
       description: "",
@@ -143,8 +159,8 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
       ],
       correct_answer: "",
       explanation: "",
-      marks: 4,
-      negative_marks: 1,
+      marks: pos,
+      negative_marks: neg,
     });
   };
 
@@ -272,10 +288,18 @@ export default function ExamFolderDialog({ open, onOpenChange, initial, onSaved 
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {TAG_PRESETS.map((t) => (
                     <button type="button" key={t}
-                      onClick={() => setForm({ ...form, exam_tag: t })}
+                      onClick={() => {
+                        const [p, n] = marksForTag(t);
+                        setForm({
+                          ...form,
+                          exam_tag: t,
+                          instructions: instructionsForTag(t),
+                          negative_marking: n > 0,
+                        });
+                      }}
                       className={`px-2.5 py-1 text-xs rounded-sm border mono transition-colors ${form.exam_tag === t ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
                       data-testid={`ef-tag-${t.replace(/\s+/g, "-")}`}>
-                      {t}
+                      {t} <span className="opacity-70">(+{marksForTag(t)[0]}/-{marksForTag(t)[1]})</span>
                     </button>
                   ))}
                 </div>
